@@ -19,13 +19,81 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from transformers import LlamaTokenizer
+from transformers import AutoTokenizer
 
 import tensorrt_llm
 from tensorrt_llm.quantization import QuantMode
 from tensorrt_llm.runtime import ModelConfig, SamplingConfig
 
 from build import get_engine_name  # isort:skip
+
+import time
+
+
+class Timer:
+    def __init__(self, name=""):
+        self.start_time = None
+        self.end_time = None
+        self.name = name
+
+    def __enter__(self):
+        self.start_time = time.time()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.end_time = time.time()
+        self.elapsed_time = self.end_time - self.start_time
+        print(f"{self.name} took {self.elapsed_time:.6f} seconds")
+
+    def elapsed(self):
+        return self.elapsed_time
+
+
+class Benchmark:
+    def __init__(
+        self,
+        num_warmups,
+        num_measurements,
+        name="",
+        input_tokens=None,
+        output_tokens=None,
+    ):
+        self.num_warmups = num_warmups
+        self.num_measurements = num_measurements
+        self.name = name
+        self.times = []
+        self.input_tokens = input_tokens
+        self.output_tokens = output_tokens
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        percentiles = [50, 90, 99]
+        latencies = np.percentile(self.times, percentiles)
+        throughputs = [self.output_tokens / latency for latency in latencies]
+
+        header = "| {:7} | {:7} |".format("seqlen", "genlen")
+        for p in percentiles:
+            header += " {:9} | {:9} |".format(f"p{p}: sec", f"p{p}: tok/s")
+        print(header)
+
+        results = "| {:7} | {:7} |".format(self.input_tokens, self.output_tokens)
+        for l, t in zip(latencies, throughputs):
+            results += " {:9.3f} | {:9.3f} |".format(l, t)
+
+        print(results)
+
+    def run(self, func, *args, **kwargs):
+        for _ in range(self.num_warmups):
+            func(*args, **kwargs)
+
+        for _ in range(self.num_measurements):
+            start_time = time.time()
+            func(*args, **kwargs)
+            end_time = time.time()
+            self.times.append(end_time - start_time)
+
 
 EOS_TOKEN = 2
 PAD_TOKEN = 2
@@ -165,6 +233,9 @@ def parse_arguments():
     parser.add_argument('--input_text',
                         type=str,
                         default='Born in north-east France, Soyer trained as a')
+    parser.add_argument('--input_textfile',
+                        type=str,
+                        default=None)
     parser.add_argument(
         '--input_tokens',
         dest='input_file',
@@ -197,6 +268,7 @@ def generate(
     log_level: str = 'error',
     engine_dir: str = 'llama_outputs',
     input_text: str = 'Born in north-east France, Soyer trained as a',
+    input_textfile: str = None,
     input_file: str = None,
     output_csv: str = None,
     output_npy: str = None,
@@ -219,7 +291,7 @@ def generate(
                                            pp_size=pp_size)
     torch.cuda.set_device(runtime_rank % runtime_mapping.gpus_per_node)
 
-    tokenizer = LlamaTokenizer.from_pretrained(tokenizer_dir, legacy=False)
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_dir, legacy=False)
 
     sampling_config = SamplingConfig(end_id=EOS_TOKEN,
                                      pad_id=PAD_TOKEN,
@@ -238,6 +310,10 @@ def generate(
     if runtime_rank == 0:
         print(f"Running the {dtype} engine ...")
 
+    if input_textfile:
+        with open(input_textfile, 'r') as f:
+            input_text = f.read()
+
     input_ids, input_lengths = parse_input(input_text, input_file, tokenizer,
                                            EOS_TOKEN,
                                            model_config.remove_input_padding)
@@ -246,11 +322,25 @@ def generate(
     decoder.setup(input_lengths.size(0), max_input_length, max_output_len,
                   num_beams)
 
-    output_gen_ids = decoder.decode(input_ids,
-                                    input_lengths,
-                                    sampling_config,
-                                    streaming=streaming)
-    torch.cuda.synchronize()
+    def benchmark():
+        output_gen_ids = decoder.decode(input_ids,
+                                        input_lengths,
+                                        sampling_config,
+                                        streaming=streaming)
+        torch.cuda.synchronize()
+        return output_gen_ids
+
+    output_gen_ids = benchmark()
+
+    with Benchmark(
+        num_warmups=5,
+        num_measurements=20,
+        name="Decode",
+        input_tokens=max_input_length,
+        output_tokens=max_output_len,
+    ) as b:
+        b.run(benchmark)
+
     if streaming:
         for output_ids in throttle_generator(output_gen_ids,
                                              streaming_interval):
