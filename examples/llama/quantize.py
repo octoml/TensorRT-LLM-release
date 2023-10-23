@@ -104,6 +104,10 @@ def get_args():
                         type=int,
                         default=512,
                         help="Number of samples for calibration.")
+    parser.add_argument("--block_size",
+                        type=int,
+                        default=512,
+                        help="Block size for calibration.")
     parser.add_argument("--export_path", default="exported_model")
     parser.add_argument('--seed', type=int, default=None, help='Random seed')
     args = parser.parse_args()
@@ -124,7 +128,8 @@ def main():
     model = get_model(args.model_dir, args.dtype)
 
     calib_dataloader = get_calib_dataloader(tokenizer=tokenizer,
-                                            calib_size=args.calib_size)
+                                            calib_size=args.calib_size,
+                                            block_size=args.block_size)
     model = quantize_and_export(model,
                                 qformat=args.qformat,
                                 calib_dataloader=calib_dataloader,
