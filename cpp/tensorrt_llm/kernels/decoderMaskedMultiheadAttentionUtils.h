@@ -1563,7 +1563,7 @@ inline __device__ void update_rotary_base_n_scale(float& base, float& scale, Rot
 inline __device__ float2 rotary_embedding_coefficient(
     const int zid, const int rot_embed_dim, const float base, const float scale, const float t_step)
 {
-    const float inv_freq = (t_step * scale) / pow(base, zid / (float) rot_embed_dim);
+    const float inv_freq = (t_step * scale) / pow(1000000.0f, zid / (float) rot_embed_dim);
     return {cos(inv_freq), sin(inv_freq)};
 }
 
