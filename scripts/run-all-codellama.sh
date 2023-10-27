@@ -6,7 +6,7 @@ if [[ $# -ne 2 ]] ; then
     exit 1
 fi
 
-$TRTLLM_HOME/scripts/run-llama.sh 128 128 $1 $2
-$TRTLLM_HOME/scripts/run-llama.sh 128 2364 $1 $2
-$TRTLLM_HOME/scripts/run-llama.sh 2364 128 $1 $2
-$TRTLLM_HOME/scripts/run-llama.sh 2364 2364 $1 $2
+$TRTLLM_HOME/scripts/run-codellama.sh 128 128 $1 $2
+$TRTLLM_HOME/scripts/run-codellama.sh 128 2364 $1 $2
+$TRTLLM_HOME/scripts/run-codellama.sh 2364 128 $1 $2
+$TRTLLM_HOME/scripts/run-codellama.sh 2364 2364 $1 $2
