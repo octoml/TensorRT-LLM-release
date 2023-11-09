@@ -69,8 +69,6 @@ else
     else
 	QUANT_OPTS=" --use_weight_only --weight_only_precision $DTYPE"
     fi
-    echo "quant opts:"
-    echo $QUANT_OPTS
     exit 0
     time /opt/bin/cuda-reserve.py --num-gpus $SHARDING python $TRTLLM_HOME/examples/llama/build.py \
          --model_dir $TOKENIZER \
