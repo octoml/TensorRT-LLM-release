@@ -60,8 +60,7 @@ if [[ "$DTYPE" == "fp8" ]] ; then
          --max_batch_size $MAX_BATCH \
 	 --world_size $SHARDING \
 	 --tp_size $SHARDING \
-	 --parallel_build \
-	 --strongly_typed
+	 --parallel_build
     
 else
     echo "Building $MODELNAME in $DTYPE with max input $MAX_INPUT, max output $MAX_OUTPUT, sharding $SHARDING. Writing engine to $ENGINE_DIR."
