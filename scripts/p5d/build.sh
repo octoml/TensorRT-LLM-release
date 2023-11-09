@@ -5,6 +5,8 @@ if [[ $# -ne 2 ]] ; then
     exit 1
 fi
 
+source docker-env.sh
+
 if [[ -z "$TRTLLM_HOME" ]] ; then
     echo "TRTLLM_HOME unset"
     exit 1
@@ -22,6 +24,7 @@ CALIB_SIZE=512
 BLOCK_SIZE=512
 
 ENGINE_DIR="$ENGINES"/"$MODELNAME"_"$DTYPE"_context_"$MAX_INPUT"_"$MAX_OUTPUT"_batch_"$MAX_BATCH"_TP_"$SHARDING"
+mkdir -p $ENGINE_DIR
 
 # Start build
 if [[ "$DTYPE" == "fp8" ]] ; then
