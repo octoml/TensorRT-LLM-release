@@ -24,18 +24,20 @@ CALIB_SIZE=128
 BLOCK_SIZE=128
 
 ENGINE_DIR="$ENGINES"/"$MODELNAME"_"$DTYPE"_context_"$MAX_INPUT"_"$MAX_OUTPUT"_batch_"$MAX_BATCH"_TP_"$SHARDING"
-mkdir -p $ENGINE_DIR
+QUANT_FILE="$ENGINES"/"llama_tp1_rank0.npz"
 
-if [[ -e $ENGINE_DIR ]] ; then
-    echo "Engine $ENGINE_DIR already exists, skipping build."
-    exit 0
-fi
+#if [[ -e $ENGINE_DIR ]] ; then
+#    echo "Engine $ENGINE_DIR already exists, skipping build."
+#    exit 0
+#fi
+
+mkdir -p $ENGINE_DIR
 
 # Start build
 if [[ "$DTYPE" == "fp8" ]] ; then
     echo "Building $MODELNAME in $DTYPE with calibration size $CALIB_SIZE, block size $BLOCK_SIZE, max input $MAX_INPUT, max output $MAX_OUTPUT, sharding $SHARDING. Writing engine to $ENGINE_DIR."
 
-    if [[ ! -e $ENGINE_DIR/llama_tp1_rank0.npz ]] ; then
+    if [[ ! -e $QUANT_FILE ]] ; then
 	echo "Quantizing"
 	time /opt/bin/cuda-reserve.py --num-gpus 1 python $TRTLLM_HOME/examples/llama/quantize.py \
              --model_dir $TOKENIZER \
@@ -50,7 +52,7 @@ if [[ "$DTYPE" == "fp8" ]] ; then
 
     echo "Building engine"
     time /opt/bin/cuda-reserve.py --num-gpus $SHARDING python $TRTLLM_HOME/examples/llama/build.py \
-         --quantized_fp8_model_path $ENGINE_DIR/llama_tp1_rank0.npz \
+         --quantized_fp8_model_path $QUANT_FILE \
          --enable_fp8 \
          --fp8_kv_cache \
          --model_dir $TOKENIZER \

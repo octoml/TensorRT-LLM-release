@@ -20,7 +20,7 @@ case $DTYPE in
     *) echo "Please provide data type, one of int8 int4 fp8 fp16"; exit 1 ;;
 esac
 
-RESULTS_DIR="$TRTLLM_HOME"/results
+RESULTS_DIR="/code/results"
 RESULTS="$RESULTS_DIR"/output_"$DTYPE"_TP_"$SHARDING"
 
 if [[ -e $RESULTS ]] ; then
@@ -28,5 +28,9 @@ if [[ -e $RESULTS ]] ; then
     exit 1
 fi
 
-time ./build.sh $DTYPE $SHARDING 1>>$RESULTS 2>>$RESULTS \
-    && time ./benchmark.sh $DTYPE $SHARDING 1>>$RESULTS 2>>$RESULTS
+touch $RESULTS
+
+(time ./build.sh $DTYPE $SHARDING) >> $RESULTS 2>&1 \
+    && (time ./benchmark.sh $DTYPE $SHARDING) >> $RESULTS 2>&1
+
+echo "Finished with status $?"
