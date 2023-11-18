@@ -1,6 +1,6 @@
 import os, itertools, sys
 
-RESULTS = "/home/joseph/results"
+RESULTS = "/path/to/results_dir"
 
 HEADER = "| seqlen  | genlen  | p50: sec  | p50: tok/s | p90: sec  | p90: tok/s | p99: sec  | p99: tok/s |"
 

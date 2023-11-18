@@ -21,7 +21,7 @@ case "$INPUT_LEN" in
     *) echo "Please provide input length of 128 or 2364"; exit 1 ;;
 esac
 
-INPUT="$TRTLLM_HOME"/context/"$FNAME"
+INPUT="$TRTLLM_HOME"/scripts/p5d/context/"$FNAME"
 
 ENGINE_DIR="$ENGINES"/"$MODELNAME"_"$DTYPE"_context_"$MAX_INPUT"_"$MAX_OUTPUT"_batch_"$MAX_BATCH"_TP_"$SHARDING"
 RESULTS_DIR="/code/results"
